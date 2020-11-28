@@ -1,13 +1,12 @@
 import numpy as np
 import numpy.fft as nfft
 import numpy.linalg as la
+import numpy.random as ra
 
 import scipy.signal as sig
 import scipy.io.wavfile as wav
 
 import matplotlib.pyplot as plt
-
-import sysEstimationRLS_Test as test
 
 
 def fetch_signal(filename):
@@ -25,10 +24,11 @@ def filter_arma(data, rate, verbose = False):
     """Filter using a preset ARMA system"""
     #Place poles by hand, it doesn't matter much. Values should be in hz
     #I can't be bothered playing with the radius.
-    zeros = np.array([100, 2000, 4000])
-    poles = np.array([200, 2000, 8000])
-    z = 0.999 * np.exp(2j * np.pi * (zeros / (2 * rate)) )
-    p = 0.999 * np.exp(2j * np.pi * (poles / (2 * rate)) )
+    zeros = np.array([100, 2000, 400, 412, 2500, 3500,  4000])
+    poles = np.array([200, 2000, 3000, 8000])
+    z = 0.99 * np.exp(2j * np.pi * (zeros / (2 * rate)) )
+    p = 0.99 * np.exp(2j * np.pi * (poles / (2 * rate)) )
+    #Make the filter use real transfer function values!
     z = np.append(z, z.conj())
     p = np.append(p, p.conj())
 
@@ -88,8 +88,9 @@ def throughRLS(R0,f0,rho,x_in,d_in,n_iter,verbose=False):
     y_out = np.zeros(l_min_input)
     e_out = np.zeros(l_min_input)
 
+    #Start filter
     for n in np.arange(0, n_iter - 1):
-        ### Work through this stage ###
+        ### Work through the current stage ###
         ###############################
 
         #update x vector
@@ -97,6 +98,8 @@ def throughRLS(R0,f0,rho,x_in,d_in,n_iter,verbose=False):
         x[0] = x_in[n]
         if (verbose):
             print("\nx = ", x)
+            print("x_in,d_in = ", x_in[n], " , ", d_in[n])
+
         #Do the "convolution", compute the error, save the result!
         y = np.sum(x * f)
         if (verbose):
@@ -107,17 +110,20 @@ def throughRLS(R0,f0,rho,x_in,d_in,n_iter,verbose=False):
         y_out[n] = y
         e_out[n] = e
 
-        ### Prepare for the next stage ###
-        ##################################
+        ########## Prepare for the next stage #######
+        ### These value affect the next iteration ###
+        #############################################
         k = np.matmul(R,x)
         if (verbose):
             print("k = ", k)
-        f += k*e
+        f = f + k*e
         if (verbose):
             print("f = ", f)
+
         R = (1/rho)*(R - (np.outer(k,k))/(rho + np.inner(x,k)))
         if (verbose):
             print("R = \n", la.inv(R))
+
     return e_out, y_out
 
 
@@ -131,27 +137,34 @@ def main(filename):
     #See how well I can estimate it!
     """
 
-    n_taps = 8
+    n_taps = 128
+    delta = 1e-5   #This is a mostly noiseless process, but we need reasonable convergence
+    rho = 0.999     #This is a stationary process, but set this to ~0.999 for stability!
 
     raw_data, rate, n_samples, t_data = fetch_signal(filename)
     in_data = np.zeros(n_samples)
-    in_data[:] = raw_data[:]
-    in_data[1] = 128
-    filt_data = filter_arma(in_data, rate)
+    #Add random noise powers, magic numbers, but I can't be bothered
+    in_data[:] = raw_data[:] + 0.2*ra.randn(n_samples)
+    filt_data = filter_arma(in_data, rate) + 1*ra.randn(n_samples)
 
-    delta = 1 #This is a mostly noiseless process, could be higher
-    rho = 1 #This is a stationary process!
     R0 = np.identity(n_taps)*delta
     f0 = np.zeros(n_taps)
 
-    e, y = throughRLS(R0,f0,rho,in_data,filt_data,32,True)
+    e, y = throughRLS(R0,f0,rho,in_data,filt_data,n_samples,False)
 
     plt.figure()
-    plt.plot(e[-1000:])
+    plt.plot(e)
+    plt.title("Approximation error")
+
+
     plt.figure()
-    plt.plot(in_data)
+    plt.plot(in_data, label = "raw audio")
+    plt.plot(filt_data, label = "arma filtered audio")
+    plt.plot(y, label = "Model filtered audio")
+    plt.legend()
+    plt.title(Values of signals)
+
     plt.show()
-
 
 
 main("test.wav")
