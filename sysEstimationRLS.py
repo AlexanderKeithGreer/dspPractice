@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.fft as nfft
+import numpy.linalg as la
 
 import scipy.signal as sig
 import scipy.io.wavfile as wav
@@ -15,9 +16,10 @@ def fetch_signal(filename):
     It might do more later.
     """
 
-    rate, data = wav.read(filename)
-    print(rate)
-    return data, rate
+    fs, data = wav.read(filename)
+    n_samples = len(data)
+    t_data = n_samples/fs
+    return data, fs, n_samples, t_data
 
 def filter_arma(data, rate, verbose = False):
     """Filter using a preset ARMA system"""
@@ -52,7 +54,7 @@ def filter_arma(data, rate, verbose = False):
         plt.plot(w)
     return output
 
-def throughRLS(R0,f0,rho,x_in,d_in,n_iter):
+def throughRLS(R0,f0,rho,x_in,d_in,n_iter,verbose=False):
     """
     This is a stock implementation of an RLS algorithm
     Please check if faster algorithms are more applicable, I don't
@@ -63,44 +65,59 @@ def throughRLS(R0,f0,rho,x_in,d_in,n_iter):
     """
 
     #Initial checks and setup.
-    if (len(d) != len(x)):
+    if (len(d_in) != len(x_in)):
         print("WARNING:")
         print("Data vector length mismatch (non-fatal)")
 
-    min_input_l = np.min([len(x),len(d)])
-    filter_l = len(f0)
+    l_min_input = np.min([len(x_in),len(d_in)])
+    l_filter = len(f0)
 
-    if (n_iter < min_input_l):
+    if (n_iter > l_min_input):
         print("ERROR:")
         print("RLS doesn't have enough data for requested No iterations")
 
+    if (np.max(np.shape(R0)) != l_filter):
+        print("ERROR:")
+        print("R^-1 doesn't match the filter length")
+
     R = np.zeros(np.shape(R0))
     R[:] = R0[:]
-    f = np.zeros(filter_l)
+    f = np.zeros(l_filter)
     f[:] = f0[:]
-    x = np.zeros(filter_l)
-    y_out = np.zeros(min_input_l)
-    e_out = np.zeros(min_input_l)
+    x = np.zeros(l_filter)
+    y_out = np.zeros(l_min_input)
+    e_out = np.zeros(l_min_input)
 
-    for n in np.arange(0, min_input_l - 1):
+    for n in np.arange(0, n_iter - 1):
         ### Work through this stage ###
         ###############################
 
         #update x vector
         x = np.roll(x,1)
         x[0] = x_in[n]
+        if (verbose):
+            print("\nx = ", x)
         #Do the "convolution", compute the error, save the result!
         y = np.sum(x * f)
-        e = y - d[n]
+        if (verbose):
+            print("y = ", y)
+        e = d_in[n] - y
+        if (verbose):
+            print("e = ", e)
         y_out[n] = y
         e_out[n] = e
 
         ### Prepare for the next stage ###
         ##################################
         k = np.matmul(R,x)
+        if (verbose):
+            print("k = ", k)
         f += k*e
+        if (verbose):
+            print("f = ", f)
         R = (1/rho)*(R - (np.outer(k,k))/(rho + np.inner(x,k)))
-
+        if (verbose):
+            print("R = \n", la.inv(R))
     return e_out, y_out
 
 
@@ -114,13 +131,26 @@ def main(filename):
     #See how well I can estimate it!
     """
 
-    n_taps = 32
+    n_taps = 8
 
+    raw_data, rate, n_samples, t_data = fetch_signal(filename)
+    in_data = np.zeros(n_samples)
+    in_data[:] = raw_data[:]
+    in_data[1] = 128
+    filt_data = filter_arma(in_data, rate)
 
-    raw_data, rate = fetch_signal(filename)
-    filt_data = filter_arma(raw_data, rate)
+    delta = 1 #This is a mostly noiseless process, could be higher
+    rho = 1 #This is a stationary process!
+    R0 = np.identity(n_taps)*delta
+    f0 = np.zeros(n_taps)
 
-    R0 = np.identity(n_taps)
+    e, y = throughRLS(R0,f0,rho,in_data,filt_data,32,True)
+
+    plt.figure()
+    plt.plot(e[-1000:])
+    plt.figure()
+    plt.plot(in_data)
+    plt.show()
 
 
 
