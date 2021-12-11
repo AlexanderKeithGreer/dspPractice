@@ -32,7 +32,6 @@ architecture arch of crudeLMS is
 	
 	signal r_error : signed(g_width-1 downto 0);
 	
-	
 begin
 	--This means that there will be one stage for the multiplications
 	--Smallest number is for the current input

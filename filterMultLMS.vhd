@@ -31,6 +31,7 @@ begin
 	
 	MAIN: process (i_clk, i_reset, i_ref, i_contam) is
 		variable v_sum : signed(g_width*2-1 downto 0) := i_ref;
+
 	begin
 	
 		if (i_reset = '1') then
