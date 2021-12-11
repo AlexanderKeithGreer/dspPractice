@@ -30,16 +30,17 @@ architecture arch of filterMultLMS is
 begin
 	
 	MAIN: process (i_clk, i_reset, i_ref, i_contam) is
-		variable v_sum : signed(g_wdith*2-1 downto 0) := i_ref;
+		variable v_sum : signed(g_width*2-1 downto 0) := i_ref;
 	begin
 	
 		if (i_reset = '1') then
 			for C in a_coef'range loop
 				a_coef(C) <= (others=> '0');
 			end loop;
+			
 			for L in a_last'range loop
-				a_last(C) <= (others=> '0');
-				a_result(C) <= (others => '0');
+				a_last(L) <= (others=> '0');
+				a_result(L) <= (others => '0');
 			end loop;
 			
 			
