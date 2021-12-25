@@ -6,12 +6,12 @@ use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
 
 
-
 entity crudeLMS is
 	generic (g_width 	: integer:=12;
 				g_mu		: integer:=5);
 	port (	i_clk 	: in std_logic;
 				i_reset	: in std_logic;
+				i_valid	: in std_logic;
 				i_refere	: in signed (g_width-1 downto 0);
 				i_contam : in signed (g_width-1 downto 0);
 				o_debug : out signed (g_width-1 downto 0);
@@ -40,7 +40,7 @@ begin
 	o_output <= r_error;
 	o_debug <= a_result(0)(g_width-1 downto 0);
 	
-	MAIN: process(i_clk, i_reset, i_refere, i_contam)
+	MAIN: process(i_clk, i_reset, i_refere, i_contam, i_valid)
 		variable v_sum : signed(2*g_width+3-1 downto 0) := (others=> '0');
 		variable v_errorDataProduct : signed(2*g_width-1 downto 0);
 	begin
@@ -55,7 +55,7 @@ begin
 			end loop;
 			r_error <= (others => '0');
 			
-		elsif (rising_edge(i_clk)) then
+		elsif (rising_edge(i_clk) and i_valid = '1') then
 			--First stage, let out result be 2*g_width!!
 			for R in 1 to 7 loop
 				a_result(R) <= a_taps(R) * a_past(R);
@@ -80,7 +80,6 @@ begin
 			end loop;
 			a_taps(0) <= i_refere;
 		end if;
-		wait;
 	end process;
 
 end arch;

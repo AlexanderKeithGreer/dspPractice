@@ -16,17 +16,19 @@ architecture tb of crudeLMS_tb is
 		generic (g_width 	: integer:=12;
 			g_mu		: integer:=5);
 		port (	i_clk 	: in std_logic;
-			i_reset	: in std_logic;
-			i_refere	: in signed (g_width-1 downto 0);
-			i_contam : in signed (g_width-1 downto 0);
-			o_debug	: out signed (g_width-1 downto 0);
-			o_output	: out signed (g_width-1 downto 0));
+					i_reset	: in std_logic;
+					i_valid	: in std_logic;
+					i_refere	: in signed (g_width-1 downto 0);
+					i_contam : in signed (g_width-1 downto 0);
+					o_debug	: out signed (g_width-1 downto 0);
+					o_output	: out signed (g_width-1 downto 0));
 	end component;
 	
 	constant c_period : time:=25ns;
 	constant c_width	: integer:=12;
-	constant c_mu		: integer:=5;
-	
+	constant c_mu		: integer:=8;
+
+	signal c_valid		: std_logic:='1'; --force always valid	
 	signal r_clk 		: std_logic;
 	signal w_reset		: std_logic:='1';
 	signal w_refere 	: signed(c_width-1 downto 0);
@@ -40,7 +42,7 @@ begin
 	
 	UUT: crudeLMS
 		generic map (g_width=>c_width)
-		port map (i_clk=>r_clk, i_reset=>w_reset,
+		port map (i_clk=>r_clk, i_reset=>w_reset, i_valid=>c_valid,
 					 i_refere=>w_refere, i_contam=>w_contam,
 					 o_output=>w_output, o_debug=>w_debug);
 	
@@ -73,6 +75,7 @@ begin
 		end loop;
 		file_close(f_data);
 		
+		wait;
 	end process;
 	
 end tb;
