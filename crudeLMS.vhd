@@ -8,13 +8,13 @@ use ieee.std_logic_1164.all;
 
 entity crudeLMS is
 	generic (g_width 	: integer:=12;
-				g_mu		: integer:=5);
+				g_mu		: integer:=3);
 	port (	i_clk 	: in std_logic;
 				i_reset	: in std_logic;
 				i_valid	: in std_logic;
 				i_refere	: in signed (g_width-1 downto 0);
 				i_contam : in signed (g_width-1 downto 0);
-				o_debug : out signed (g_width-1 downto 0);
+				o_debug 	: out signed (g_width-1 downto 0);
 				o_output	: out signed (g_width-1 downto 0));
 end crudeLMS;
 
@@ -38,7 +38,8 @@ begin
 
 	
 	o_output <= r_error;
-	o_debug <= a_result(0)(g_width-1 downto 0);
+	--o_debug <= a_result(0)(2*g_width-1 downto g_width);
+	o_debug <= a_taps(0);
 	
 	MAIN: process(i_clk, i_reset, i_refere, i_contam, i_valid)
 		variable v_sum : signed(2*g_width+3-1 downto 0) := (others=> '0');
@@ -47,7 +48,7 @@ begin
 		
 		if (i_reset = '1') then
 			for R in a_taps'range loop
-				a_taps(R) <= (others => '0');
+				a_taps(R) <= to_signed(1, g_width);
 				a_result(R) <= (others => '0');
 			end loop;
 			for P in a_past'range loop
