@@ -15,7 +15,7 @@ def main():
     input = np.zeros(n_steps)
     #SM variables
     A = 0.95
-    C = 1e-1
+    C = 1e1
     Q = 0 #Filled out later
 
     s_act = np.zeros(n_steps)  #Actual
@@ -31,9 +31,10 @@ def main():
     #Generate input
     for ss in range(10):
         idx = np.int64(np.round(ra.rand()*n_steps-1)) + 1
-        input[idx] = 1
+        input[idx] = 4
     Q = input**2
     QQ = np.var(input)
+
     #simulate
     for ss in range(n_steps-1):
         if (ss != 0):
@@ -45,7 +46,7 @@ def main():
     for ss in range(n_steps-1):
         if (ss != 0):
             s_pred[ss] = A * s_cor[ss-1]
-            M_pred[ss] = QQ + A*A*M_cor[ss-1]
+            M_pred[ss] = Q[ss-1] + A*A*M_cor[ss-1]
 
             K[ss] = M_pred[ss] /( M_pred[ss] + C)
             s_cor[ss] = s_pred[ss] + K[ss]*(x[ss] - s_pred[ss])
@@ -55,9 +56,9 @@ def main():
             M_cor[ss] = C
 
     plt.figure()
-    plt.plot(s_act, label="s_act")
     plt.plot(x, label="x")
     plt.plot(s_cor, label="s_cor")
+    plt.plot(s_act, label="s_act")
 
     plt.figure()
     plt.plot(x, label="x")
@@ -67,6 +68,7 @@ def main():
     plt.plot(s_cor, label="s_cor-4")
     plt.plot(M_cor, label="M_cor-5")
     plt.plot(s_act, label="s_act")
+
     plt.legend()
     plt.show()
 
